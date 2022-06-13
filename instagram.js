@@ -106,20 +106,19 @@ const instagram = {
             console.log('');
             await instagram.page.waitForTimeout(getDelay('shortVar'));
 
-
             // Click on first post
-            // await instagram.page.click('.KC1QD .weEfm .kIKUG');  old
-            //await instagram.page.click('._aao7 ._aabd');    
-            await instagram.page.click('article a');
+            try{
+                await instagram.page.click('article a');
+            }
+            catch(err){
+                console.log('ERROR! ' + err);
+                i = NUM_OF_PICT_TO_LIKE; // Switch to next teg
+                break; // break the loop and try it again
+            }  
+            
 
             //Skip 9 top pictures
-            for(let i = 0; i < 9; i++){
-                    let next = await instagram.page.$('svg[aria-label="Next"]');
-                    if(next){
-                        await instagram.page.click('svg[aria-label="Next"]');
-                        await instagram.page.waitForTimeout(getDelay('shortVar'));
-                    }
-            }
+            await skipPictures(0);
 
 
             await instagram.page.waitForTimeout(getDelay('shortVar'));
@@ -143,15 +142,9 @@ const instagram = {
                     await instagram.page.waitForTimeout(getDelay('shortVar'));
 
                     if(isLikable != null && notLikable == null){
-                        //console.log("First check");
                         await instagram.page.waitForTimeout(getDelay('shortVar'));
-                        isLikable == null
-                        // Double check if it's likable
-                        isLikable = await instagram.page.$('svg[aria-label="Like"]');
                         await instagram.page.waitForTimeout(6000);
-                        //console.log("Second check. Still not liked yet. Going to like it");
-                        if(isLikable != null){
-                            
+ 
                             //
                             //
                             //  LIKE
@@ -162,63 +155,31 @@ const instagram = {
                             if(likeOrNot === 0 || likeOrNot === 1 || likeOrNot === 2) {
                                 await instagram.page.click('span._aamw');
 
-                                //Maybe comment
-                                let commentOrNot = Math.round(Math.random() * 7);
-                                const thisIsComment = commentsIS[Math.round(Math.random() * (commentsIS.length-1))] // Random comment from the Array
-                                let isForComments = commentOrNot === 0 || commentOrNot === 1;
+                                //Comment function (returns updated count for comments)
+                                comments = await comment(commentsIS, comments, false); // false - will comment randomly, true - all liked will be commented
                                 
-                                if(isForComments && comments <= MAX_COMMENTS){
-                                //if(true){
-                                    await instagram.page.waitForTimeout(2000);
-                                   
-                                    try {
-                                        await instagram.page.type('textarea', thisIsComment, {delay: 50});
-                                        await instagram.page.waitForTimeout(1000);
-                                        await instagram.page.click('button[type="Submit"]');
-                                        comments++;
-                                    }
-                                    catch(err){
-                                       console.error('ERROR!!! ' + err);
-                                       errors++;
-                                    }
-                                    
-                                    await instagram.page.waitForTimeout(2000);
-                                } 
-
                                 liked++;
                                 brakeWindow++;
                                 willStopIfManyPostAlreadyLiked = 0;
                                 isLikable = null;
-                                console.log(' ');
-                                console.log('===============================================================================');
-                                console.log('=== TAG: ' + tag + ' ======= ERRORS: ' + errors + ' =========================='); 
-                                console.log('=== COMMENTED: ' + comments + ' | LIKED: ' + liked + ' | NOT LIKED: ' + notLiked + ' | ALREADY BEEN LIKED: ' + alreadyBeenLiked);
-                                console.log('===============================================================================');
-                                console.log('=== Round: '+ round + ' ===== Start Time: ' + startTime + ' ===== Current Time: ' + new Date().toLocaleTimeString());
-                                console.log('=== Most current tags number: ' + mostCurrentTags);
-                                console.log('===============================================================================');
-                                console.log(' ');
+                                
+                                // Print Report
+                                await printReport(tag, errors, comments, liked, notLiked, alreadyBeenLiked, round, startTime, mostCurrentTags);
+
                                 i++;
-                            } else { // Not liked this picture
+                            } else { // Skipping this Picture
                                 notLiked++;
+                                await printReport(tag, errors, comments, liked, notLiked, alreadyBeenLiked, round, startTime, mostCurrentTags);
                             }
-                        }
+                        
                     } else {
                         // This picture already liked
                         // Just do some delay
                         alreadyBeenLiked++;
                         willStopIfManyPostAlreadyLiked++
                         
-                            console.log(' ');
-                            console.log('== SKIPPING ==');
-                            console.log('===============================================================================');
-                            console.log('=== TAG: ' + tag + ' ======= ERRORS: ' + errors + ' =========================='); 
-                            console.log('=== COMMENTED: ' + comments + ' | LIKED: ' + liked + ' | NOT LIKED: ' + notLiked + ' | ALREADY BEEN LIKED: ' + alreadyBeenLiked);
-                            console.log('===============================================================================');
-                            console.log('=== Round: '+ round + ' ===== Start Time: ' + startTime + ' ===== Current Time: ' + new Date().toLocaleTimeString());
-                            console.log('=== Most current tags number: ' + mostCurrentTags);
-                            console.log('===============================================================================');
-                            console.log(' ');
+                        // Print Report
+                        await printReport(tag, errors, comments, liked, notLiked, alreadyBeenLiked, round, startTime, mostCurrentTags)
 
                         isLikable = null;
                         if(willStopIfManyPostAlreadyLiked > 3) {
@@ -283,6 +244,61 @@ const instagram = {
             // waiting for the next tag
             await instagram.page.waitForTimeout(getDelay('longVar'));
         }
+    }
+
+
+}
+
+// ================================================================= FUNCTIONS ===================================================
+
+// Login to Console
+async function printReport(tag, errors, comments, liked, notLiked, alreadyBeenLiked, round, startTime, mostCurrentTags){
+    console.log(' ');
+    console.log('===============================================================================');
+    console.log('=== TAG: ' + tag + ' ======= ERRORS: ' + errors + ' =========================='); 
+    console.log('=== COMMENTED: ' + comments + ' | LIKED: ' + liked + ' | NOT LIKED: ' + notLiked + ' | ALREADY BEEN LIKED: ' + alreadyBeenLiked);
+    console.log('===============================================================================');
+    console.log('=== Round: '+ round + ' ===== Start Time: ' + startTime + ' ===== Current Time: ' + new Date().toLocaleTimeString());
+    console.log('=== Most current tags number: ' + mostCurrentTags);
+    console.log('===============================================================================');
+    console.log(' ');
+}
+
+// Skip few pictures
+async function skipPictures(numOfPictToSkip){
+    for(let i = 0; i < numOfPictToSkip; i++){
+        let next = await instagram.page.$('svg[aria-label="Next"]');
+        if(next){
+            await instagram.page.click('svg[aria-label="Next"]');
+            await instagram.page.waitForTimeout(getDelay('shortVar'));
+        }
+    }
+}
+
+// Comment Function
+async function comment(commentsIS, comments, isTrue){
+    
+    let commentOrNot = Math.round(Math.random() * 7);
+    const thisIsComment = commentsIS[Math.round(Math.random() * (commentsIS.length-1))] // Random comment from the Array
+    let isForComments = commentOrNot === 0 || commentOrNot === 1;
+    
+    if((isForComments && comments <= MAX_COMMENTS) || isTrue){
+        await instagram.page.waitForTimeout(2000);
+       
+        try {
+            await instagram.page.type('textarea', thisIsComment, {delay: 50});
+            await instagram.page.waitForTimeout(1000);
+            await instagram.page.click('button[type="Submit"]');
+            comments++;
+            return comments;
+        }
+        catch(err){
+           console.error('ERROR!!! ' + err);
+           errors++;
+        }
+        await instagram.page.waitForTimeout(2000);
+    } else {
+        return comments;
     }
 }
 
