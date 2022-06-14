@@ -4,7 +4,7 @@ const BASE_URL = 'https://www.instagram.com';
 const TAG_URL = (tag) => `https://www.instagram.com/explore/tags/${tag}/` 
 
 const NUM_OF_PICT_TO_LIKE = [4, 6, 8, 10, 12, 15];
-const MAX_LIKES = 200;
+const MAX_LIKES = 350;
 const MAX_COMMENTS = 40;
 
 function getDelay(timeFrame) {
@@ -118,7 +118,7 @@ const instagram = {
             
 
             //Skip 9 top pictures
-            await skipPictures(0);
+            await skipPictures(9);
 
 
             await instagram.page.waitForTimeout(getDelay('shortVar'));
@@ -151,7 +151,7 @@ const instagram = {
                             //
                             // Randomly like or not current picture
                             //
-                            let likeOrNot = Math.round(Math.random() * 3); 
+                            let likeOrNot = Math.round(Math.random() * 4); 
                             if(likeOrNot === 0 || likeOrNot === 1 || likeOrNot === 2) {
                                 await instagram.page.click('span._aamw');
 
@@ -169,6 +169,7 @@ const instagram = {
                                 i++;
                             } else { // Skipping this Picture
                                 notLiked++;
+                                console.log('=========== Sipping this pic =============')
                                 await printReport(tag, errors, comments, liked, notLiked, alreadyBeenLiked, round, startTime, mostCurrentTags);
                             }
                         
@@ -294,7 +295,7 @@ async function comment(commentsIS, comments, isTrue){
         }
         catch(err){
            console.error('ERROR!!! ' + err);
-           errors++;
+           errors++; // Errors not defined
         }
         await instagram.page.waitForTimeout(2000);
     } else {
