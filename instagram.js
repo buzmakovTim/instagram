@@ -4,9 +4,9 @@ const BASE_URL = 'https://www.instagram.com';
 const TAG_URL = (tag) => `https://www.instagram.com/explore/tags/${tag}/` 
 
 const NUM_OF_PICT_TO_LIKE = [4, 6, 8, 10, 12, 15];
-const MAX_LIKES = 350;
+const MAX_LIKES = 450;
 const MAX_COMMENTS = 40;
-const MAX_TOTAL_LIKE_PER_TAG = 5;
+const MAX_TOTAL_LIKE_PER_TAG = 5; // for Random function
 const MAX_ERRORS = 15;
 
 let RUNNING = {
@@ -85,20 +85,9 @@ const instagram = {
 
     likeTagsProcess: async (tags = []) => {
         
-        //const commentsIS = ['Nice', 'Cool! 🏍', 'I Love it ;)', 'Its awesome :)', 'Thats cool! 👍', '🔥🔥🔥', '👍👍👍', '😎👍', '🏍'];
         RUNNING.startTime = new Date().toLocaleTimeString();
         RUNNING.tags = tags;
         
-
-
-        //let liked = 0;
-        //let comments = 0;
-        //let errors = 0;
-        //let notLiked = 0;
-        //let alreadyBeenLiked = 0;
-        //let round = 0;
-        //let brakeWindow = 0; // After brake finished 5 more like cycles will be done without hitting brake point again
- 
         // Get current tag
         let tagNumber = Math.round(Math.random() * (RUNNING.tags.length-1)); 
         RUNNING.tag = tags[tagNumber];
@@ -221,64 +210,24 @@ const instagram = {
                                     i++;
                                     await instagram.page.waitForTimeout(500);
                                 }
-                }
-                    
-
-                    // BREAK TIME
+                
+                
                     //DO 30 or 60 min BRAKE every 50 ad 100 likes 
-                    if(RUNNING.liked != 0 && RUNNING.liked % 50 == 0 && RUNNING.brakeWindow > 0){
-                        if(liked % 100 == 0){ // 60 min break
-                            console.log('============== 60 min BREAK START ================');
-                            console.log('Start time:' + new Date().toLocaleTimeString());
-                            await instagram.page.waitForTimeout(getDelay('hour'));
-                            console.log('Break is Done at:' + new Date().toLocaleTimeString());
-                            console.log('============== 60 min BREAK FINISHED =============')
-                            RUNNING.brakeWindow = 0; // reset brake point so it's not gonna hit brake again if no pictures liked
-                            break; // Finish liking round and change the Tag    
-                        } else { // 30 min break
-                            console.log('============== 30 min BREAK START ================');
-                            console.log('Start time:' + new Date().toLocaleTimeString());
-                            await instagram.page.waitForTimeout(getDelay('halfHour'));
-                            console.log('Break is Done at:' + new Date().toLocaleTimeString());
-                            console.log('============== 30 min BREAK FINISHED =============')
-                            RUNNING.brakeWindow = 0;
-                            break; // Finish liking round and change the Tag
-                        }   
+                    let isBreakDone = await checkIfBreakTime(RUNNING)
+                    if(isBreakDone){
+                        break;
                     }
-
+                    
                     // Click to Next
-                    //console.log('Prepare to click next'); 
-                    await instagram.page.waitForTimeout(2000);
-                    let next = await instagram.page.$('svg[aria-label="Next"]');
-                    if(next){
-                        await instagram.page.click('svg[aria-label="Next"]');
-                        isLikable = null;
-                        //console.log('NEXT clicked isLikable - ' + isLikable);
-                        await instagram.page.waitForTimeout(2000);
-                    } else {
-                        isLikable = null;
-                    }
+                    await instagram.page.waitForTimeout(2000);    
+                    await skipPictures(1);
                 }
-
+            }
             
-            //Close modal
-            //let closeButton = await instagram.page.click('svg[aria-label="Close"]');
-            //if(closeButton){
-            //    try{
-            //        await instagram.page.click('svg[aria-label="Close"]');
-            //    }
-            //    catch(err){
-            //        console.log('CATCH BLOCK CALLED');
-            //        console.error('ERROR!!! ' + err);
-            //    }
-            //} 
-            
-            // waiting for the next tag
+            // waiting for the next tag 
             await instagram.page.waitForTimeout(getDelay('longVar'));
         }
     }
-
-
 }
 
 // ================================================================= FUNCTIONS ===================================================
@@ -332,6 +281,31 @@ async function comment(RUNNING, isTrue){
         await instagram.page.waitForTimeout(2000);
     } else {
         return RUNNING;
+    }
+}
+
+//Break Time Function
+async function checkIfBreakTime(RUNNING){
+    if(RUNNING.liked != 0 && RUNNING.liked % 50 == 0 && RUNNING.brakeWindow > 0){
+        if(liked % 100 == 0){ // 60 min break
+            console.log('============== 60 min BREAK START ================');
+            console.log('Start time:' + new Date().toLocaleTimeString());
+            await instagram.page.waitForTimeout(getDelay('hour'));
+            console.log('Break is Done at:' + new Date().toLocaleTimeString());
+            console.log('============== 60 min BREAK FINISHED =============')
+            RUNNING.brakeWindow = 0; // reset brake point so it's not gonna hit brake again if no pictures liked
+            return true; // Finish liking round and change the Tag    
+        } else { // 30 min break
+            console.log('============== 30 min BREAK START ================');
+            console.log('Start time:' + new Date().toLocaleTimeString());
+            await instagram.page.waitForTimeout(getDelay('halfHour'));
+            console.log('Break is Done at:' + new Date().toLocaleTimeString());
+            console.log('============== 30 min BREAK FINISHED =============')
+            RUNNING.brakeWindow = 0;
+            return true; // Finish liking round and change the Tag
+        }   
+    } else {
+        return false;
     }
 }
 
