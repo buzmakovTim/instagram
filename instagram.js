@@ -1,8 +1,9 @@
 const puppeteer = require('puppeteer');
 
 const BASE_URL = 'https://www.instagram.com';
-const TAG_URL = (tag) => `https://www.instagram.com/explore/tags/${tag}/`
-
+const TAG_URL = (tag) => `https://www.instagram.com/explore/tags/${tag}/`;
+const USER_URL = (userName) => `https://www.instagram.com/${userName}/`;
+ 
 const NUM_OF_PICT_TO_LIKE = [4, 6, 8, 10, 12, 15];
 const MAX_LIKES = 450;
 const MAX_COMMENTS = 64;
@@ -18,6 +19,7 @@ let RUNNING = {
     round: 0,
     brakeWindow: 0,
     commentsIS: ['Nice 👍', 'Cool! 🏍', 'I Love it 🔥', 'Its awesome :)', 'Thats cool! 👍', '🔥🔥🔥', '👍👍👍', '😎👍', '🏍'],
+    usersForLiking: [],
     tag: "",
     tags: [],
     mostCurrentTags: [],
@@ -120,7 +122,8 @@ const instagram = {
 
             // Click on first post
             try {
-                await instagram.page.click('article a');
+                //await instagram.page.click('article a');
+                await openFirstPicture();
                 RUNNING.isRunning = true;
             }
             catch (err) {
@@ -139,89 +142,12 @@ const instagram = {
                 //Skip 9 top pictures
                 await skipPictures(9);
 
-
+                // Short delay
                 await instagram.page.waitForTimeout(getDelay('shortVar'));
 
-                // like Number of post using arrow right
-                let isLikable = null;
-                let notLikable = null;
-                let willStopIfManyPostAlreadyLiked = 0;
+                // Like Pictures
+                await likeNumberOfPictures(MAX_TOTAL_LIKE_PER_TAG);
 
-                let i = 0;
-                // Set how many like for this TAG 
-                RUNNING.totalLikeForThisRound = NUM_OF_PICT_TO_LIKE[Math.round(Math.random() * MAX_TOTAL_LIKE_PER_TAG)];
-                while (i < RUNNING.totalLikeForThisRound) {
-                    //await instagram.page.waitForTimeout(500);
-                    //console.log("Looking at the new picture. isLikable - " + isLikable);
-                    await instagram.page.waitForTimeout(getDelay('shortVar'));
-
-                    isLikable = await instagram.page.$('svg[aria-label="Like"]');
-                    notLikable = await instagram.page.$('svg[aria-label="Unlike"]');
-
-                    await instagram.page.waitForTimeout(getDelay('shortVar'));
-
-                    if (isLikable != null && notLikable == null) {
-                        await instagram.page.waitForTimeout(getDelay('shortVar'));
-                        await instagram.page.waitForTimeout(6000);
-
-                        //
-                        //
-                        //  LIKE
-                        //
-                        // Randomly like or not current picture
-                        //
-                        let likeOrNot = Math.round(Math.random() * 4);
-                        if (likeOrNot === 0 || likeOrNot === 1 || likeOrNot === 2) {
-                            await instagram.page.click('span._aamw');
-
-                            //Comment function (returns updated count for comments)
-                            RUNNING = await comment(RUNNING, false); // false - will comment randomly, true - all liked will be commented
-
-                            RUNNING.liked++;
-                            RUNNING.brakeWindow++;
-                            willStopIfManyPostAlreadyLiked = 0;
-                            isLikable = null;
-
-                            // Print Report
-                            await printReport(RUNNING);
-
-                            i++;
-                        } else { // Skipping this Picture
-                            RUNNING.notLiked++;
-                            console.log('=========== Skipping this pic =============')
-                            await printReport(RUNNING);
-                        }
-
-                    } else {
-                        // This picture already liked
-                        // Just do some delay
-                        RUNNING.alreadyBeenLiked++;
-                        willStopIfManyPostAlreadyLiked++
-
-                        // Print Report
-                        await printReport(RUNNING)
-
-                        isLikable = null;
-                        if (willStopIfManyPostAlreadyLiked > 3) {
-                            console.log("To many liked pictures, switching to next tag");
-                            await instagram.page.waitForTimeout(4000);
-                            i = NUM_OF_PICT_TO_LIKE;
-                        }
-                        i++;
-                        await instagram.page.waitForTimeout(500);
-                    }
-
-
-                    //DO 30 or 60 min BRAKE every 50 ad 100 likes 
-                    let isBreakDone = await checkIfBreakTime(RUNNING)
-                    if (isBreakDone) {
-                        break;
-                    }
-
-                    // Click to Next
-                    await instagram.page.waitForTimeout(2000);
-                    await skipPictures(1);
-                }
             }
 
             // waiting for the next tag 
@@ -249,11 +175,118 @@ async function printReport() {
 // Skip few pictures
 async function skipPictures(numOfPictToSkip) {
     for (let i = 0; i < numOfPictToSkip; i++) {
-        let next = await instagram.page.$('svg[aria-label="Next"]');
+        let next = await instagram.page.$('svg[aria-label="Next"]'); 
         if (next) {
             await instagram.page.click('svg[aria-label="Next"]');
             await instagram.page.waitForTimeout(getDelay('shortVar'));
         }
+    }
+}
+
+async function likeNumberOfPictures(maxNumberOfPicturesToLike){
+    // like Number of post using arrow right
+    let isLikable = null;
+    let notLikable = null;
+    let willStopIfManyPostAlreadyLiked = 0;
+
+    let i = 0;
+    // Set how many like for this TAG 
+    RUNNING.totalLikeForThisRound = NUM_OF_PICT_TO_LIKE[Math.round(Math.random() * maxNumberOfPicturesToLike)];
+    while (i < RUNNING.totalLikeForThisRound) {
+        //await instagram.page.waitForTimeout(500);
+        //console.log("Looking at the new picture. isLikable - " + isLikable);
+        await instagram.page.waitForTimeout(getDelay('shortVar'));
+
+        isLikable = await instagram.page.$('svg[aria-label="Like"]');
+        notLikable = await instagram.page.$('svg[aria-label="Unlike"]');
+
+        await instagram.page.waitForTimeout(getDelay('shortVar'));
+
+        if (isLikable != null && notLikable == null) {
+            await instagram.page.waitForTimeout(getDelay('shortVar'));
+            await instagram.page.waitForTimeout(6000);
+
+            //
+            //
+            //  LIKE
+            //
+            // Randomly like or not current picture
+            //
+            let likeOrNot = Math.round(Math.random() * 4);
+            if (likeOrNot === 0 || likeOrNot === 1 || likeOrNot === 2) {
+                await instagram.page.click('span._aamw');
+
+                //Comment function (returns updated count for comments)
+                RUNNING = await comment(RUNNING, false); // false - will comment randomly, true - all liked will be commented
+
+                RUNNING.liked++;
+                RUNNING.brakeWindow++;
+                willStopIfManyPostAlreadyLiked = 0;
+                isLikable = null;
+
+                // Print Report
+                await printReport(RUNNING);
+
+                i++;
+            } else { // Skipping this Picture
+                RUNNING.notLiked++;
+                console.log('=========== Skipping this pic =============')
+                await printReport(RUNNING);
+            }
+
+        } else {
+            // This picture already liked
+            // Just do some delay
+            RUNNING.alreadyBeenLiked++;
+            willStopIfManyPostAlreadyLiked++
+
+            // Print Report
+            await printReport(RUNNING)
+
+            isLikable = null;
+            if (willStopIfManyPostAlreadyLiked > 3) {
+                console.log("To many liked pictures, switching to next tag");
+                await instagram.page.waitForTimeout(4000);
+                i = NUM_OF_PICT_TO_LIKE;
+            }
+            i++;
+            await instagram.page.waitForTimeout(500);
+        }
+
+
+        //DO 30 or 60 min BRAKE every 50 ad 100 likes 
+        let isBreakDone = await checkIfBreakTime(RUNNING)
+        if (isBreakDone) {
+            break;
+        }
+
+        // Click to Next
+        await instagram.page.waitForTimeout(2000);
+        await skipPictures(1);
+    }
+}
+
+
+async function openFirstPicture(){
+    try{
+        await instagram.page.click('article a');
+    } catch (err){
+        console.log('First Pic cant be displayed' + err);
+    }
+    
+}
+
+async function addUserToPotencialForLikes(){
+
+}
+
+// Open User Page
+async function openUserPage(userName){
+    try{
+        await instagram.page.goto(USER_URL(userName), { waitUntil: 'networkidle2' });
+    }
+    catch(err){
+        console.log('User Page cant be displayed' + err);
     }
 }
 
